@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width" />
+	<title>Postcodes to IMD decile</title>
+	<link rel="StyleSheet" href="resources/style.css" type="text/css" />
+	<link href="favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon">
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:site" content="@ODILeeds">
+	<meta name="twitter:url" property="og:url" content="https://odileeds.github.io/Postcodes2IMD/">
+	<meta name="twitter:title" property="og:title" content="Postcodes to IMD decile">
+	<meta name="twitter:description" property="og:description" content="">
+	<meta name="twitter:image" property="og:image" content="https://odileeds.org/resources/images/odileeds.png">
+	<style>
+	textarea, #map, td, th, table {
+		border: 1px solid #cccccc;
+	}
+	code, pre {
+		font-family: monospace;
+		color: #555555;
+		background-color: #dddddd;
+		padding: 0 0.25em;
+	}
+	.dropzone {
+		border: 2px dashed #999999;
+		border-radius: 5px;
+		color: #333333;
+		padding: 25px;
+		text-align: center;
+		position: relative;
+	}
+	.dropzone.loaded {
+		border: 2px solid #333333;
+		color: #333333;
+	}
+	.dropzone.loaded .helpertext {
+		display: none;
+	}
+	.dropzone.drop {
+		background-color: #ddd;
+	}
+	.dropzone .helpertext {
+		position: relative;
+	}
+	.dropzone input {
+		position: absolute;
+		left: 0px;
+		top: 0px;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+	}
+	.glory .holder, .glory-opacity {
+		height: auto;
+	}
+	.table-holder {
+		overflow-x: auto;
+		width: 100%;
+	}
+	h2, h3 { margin-top: 48px; }
+	textarea, #csvcontents {
+		width: 100%;
+		min-height: 15em;
+		height: 15em;
+		overflow-x: auto;
+		padding: 6px;
+		background: white;
+	}
+	#messages ol { list-style: none; margin-left: 0px; }
+	#messages ol > li { line-height: 2em; border-bottom: 1px solid white; }
+	#messages ol > li:last-child { border-bottom: 0px; }
+	#main .seasonal .holder { position: relative; }
+	.label {
+		display: block;
+		position: absolute;
+		top: -4px;
+		right: 0em;
+		font-size: 0.75em;
+		font-weight: bold;
+		background-color: black;
+		padding: 4px 8px 2px 8px;
+		border-radius: 0.25em;
+		vertical-align: baseline;
+		white-space: nowrap; 
+		color: white;
+	}
+	#validate {
+		display: none;
+	}
+	.checked:before {
+		content: "✓";
+		color: #1dd3a7;
+		font-size: 2em;
+		left: -0.5em;
+		position: absolute;
+	}
+	.processing:before {
+		content: "⧗";
+		color: #00B6FF;
+		font-size: 2em;
+		left: -0.5em;
+		position: absolute;
+	}
+	</style>
+	<script type="text/javascript" src="resources/stuquery.js"></script>
+	<script type="text/javascript" src="resources/postcodes2imd.js"></script>
+</head>
+<body>
+	<header class="b1-bg">
+		<div class="b1-bg glory">
+			<div class="glory-opacity">
+				<div class="holder">
+					<a href="http://odileeds.org/"><img alt="ODI Leeds" src="resources/odileeds.svg" title="ODI Leeds"></a>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<div id="main">
+		<div class="seasonal">
+			<div class="holder">
+				<h1>Postcodes to IMD deciles</h1><span class="label">ALPHA</span>
+			</div>
+		</div>
+
+		<div class="holder">
+			<form id="validation_form" method="post" enctype="multipart/form-data" action="#" accept-charset="UTF-8">
+				<input id="no_js" type="hidden" name="no_js" value="1" />
+				<input type="hidden" value="✓" name="utf8">
+				<input type="hidden" name="urls[]" value="" />
+				<input type="hidden" name="urls[]" value="" />
+				<input type="hidden" name="files[]" value="" />
+
+				<p>At the <a href="https://odileeds.org/events/diversitydata/">ODI Leeds #DiversityData event</a> one group wanted to increase our knowledge of socio-economic diversity in organisations. The idea was to come up with a simple set of statistics inspired by the <a href="https://odileeds.org/projects/gender-pay-gap/">gender pay gap</a>. How do we do that without lots of intrusive questioning of employees? One idea was to use Indices of Multiple Deprivation as a proxy; employee postcodes could be converted to IMD deciles and a simple 10 point histogram could be made for each organisation. Clearly this isn't perfect - IMDs were last created in 2015 and new housing developments mean some are out-of-date - but for large numbers of employees, it might be a good start. Before using this be sure to read our <a href="#privacy">notes on protecting privacy</a>.</p>
+				<section id="step1">
+					<h2 class="step1">Add postcodes</h2>
+					<p>We'll work with it within your browser so postcodes are not uploaded. The file should consist of a big list of postcodes each on a new line.</p>
+					<div id="drop_zone" class="dropzone block">
+						<textarea id="input"></textarea>
+						<div class="helpertext">
+							Drop a CSV file containing postcodes here (or click to browse files)<br />
+							<input id="standard_files" class="fileselect" type="file" title="browse" name="files[]" multiple="multiple" accept=".csv, .tsv, .txt" style="border:1px solid red;">
+						</div>
+					</div>
+					<output id="list"></output>
+				</section>
+
+				<section id="step2">
+					<h2 class="step2">Results</h2>
+					<p>Make sure to check if the table has been cleaned correctly.</p>
+					<output id="contents"></output>
+
+					<p><button type="button" id="save" class="seasonal">Save CSV</button> <button type="button" id="reset" class="c14-bg">Reset</button></p>
+
+					<div id="message-holder">
+						<h2>Messages</h2>
+						<output id="messages"></output>
+					</div>
+
+				</section>
+				
+			</form>
+
+			<h2 id="privacy">Privacy</h2>
+			<p>All <a href="https://theodi.org/about-the-odi/the-data-spectrum/">data is on a spectrum</a> but this project mostly uses data at the <em>closed</em> end. It is important to protect the privacy of personal data so <em>none of the raw data you enter here gets uploaded to our server</em>; it stays in the page. Obviously, we have to do a postcode lookup so we do that by requesting an entire postcode block e.g. all of <code>LS</code> (Leeds) or all of <code>BD</code> (Bradford) at a time. That way we can't know which postcode in that area you are finding the IMD decile for (that information stays in your browser window). You can also <a href="https://github.com/odileeds/Postcodes2IMD/archive/master.zip">download a copy of this project</a> to run entirely offline if that makes you feel more comfortable. You can also look at <a href="https://github.com/odileeds/Postcodes2IMD">the source code</a> to check what it is doing.</p>
+
+
+		</div>
+	</div>
+
+	<footer class="b1-bg">
+		<div class="holder">
+				Created by Stuart Lowe, <a href="http://odileeds.org/projects/">ODI Leeds</a> 2019. Find <a href="https://github.com/odileeds/Postcodes2IMD">the code on Github</a>.
+		</div>
+	</footer>
+</body>
+</html>
