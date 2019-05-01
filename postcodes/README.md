@@ -1,0 +1,3 @@
+# Data
+
+The files in this directory give the [Indices of Muliple Deprivation 2015](https://www.gov.uk/government/statistics/english-indices-of-deprivation-2015) (Ministry of Housing, Communities & Local Government) decile for each postcode. They were created by using the `LSOA11` column in the [ONS postcode lookup](http://geoportal.statistics.gov.uk/items/national-statistics-postcode-lookup-august-2018). The postcode data from ONS (derived from Code-Point® Open) are [released under the Open Government Licence](https://www.ons.gov.uk/methodology/geography/licences). The IMD data are [released under the Open Government Licence](http://opendatacommunities.org/resource?uri=http%3A%2F%2Fopendatacommunities.org%2Fdata%2Fsocietal-wellbeing%2Fimd%2Findices). 
