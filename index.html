@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width" />
 	<title>Postcodes to IMD decile</title>
 	<link rel="StyleSheet" href="resources/style.css" type="text/css" />
+	<link rel="stylesheet" href="resources/stuquery.barchart.css">
 	<link href="favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon">
 	<meta name="twitter:card" content="summary">
 	<meta name="twitter:site" content="@ODILeeds">
@@ -13,7 +14,21 @@
 	<meta name="twitter:description" property="og:description" content="">
 	<meta name="twitter:image" property="og:image" content="https://odileeds.org/resources/images/odileeds.png">
 	<style>
-	textarea, #map, td, th, table {
+	.alpha {
+		display: block;
+		position: absolute;
+		top: -4px;
+		right: 0em;
+		font-size: 0.75em;
+		font-weight: bold;
+		background-color: black;
+		padding: 4px 8px 2px 8px;
+		border-radius: 0.25em;
+		vertical-align: baseline;
+		white-space: nowrap; 
+		color: white;
+	}
+	textarea {
 		border: 1px solid #cccccc;
 	}
 	code, pre {
@@ -71,20 +86,6 @@
 	#messages ol > li { line-height: 2em; border-bottom: 1px solid white; }
 	#messages ol > li:last-child { border-bottom: 0px; }
 	#main .seasonal .holder { position: relative; }
-	.label {
-		display: block;
-		position: absolute;
-		top: -4px;
-		right: 0em;
-		font-size: 0.75em;
-		font-weight: bold;
-		background-color: black;
-		padding: 4px 8px 2px 8px;
-		border-radius: 0.25em;
-		vertical-align: baseline;
-		white-space: nowrap; 
-		color: white;
-	}
 	#validate {
 		display: none;
 	}
@@ -102,9 +103,13 @@
 		left: -0.5em;
 		position: absolute;
 	}
+	.barchart { height: 400px; margin-bottom: 1.5em; }
+	.barchart:after { content: ""; clear: both; }
 	</style>
 	<script type="text/javascript" src="resources/stuquery.js"></script>
+	<script type="text/javascript" src="resources/stuquery.barchart.js"></script>
 	<script type="text/javascript" src="resources/postcodes2imd.js"></script>
+
 </head>
 <body>
 	<header class="b1-bg">
@@ -120,7 +125,7 @@
 	<div id="main">
 		<div class="seasonal">
 			<div class="holder">
-				<h1>Postcodes to IMD deciles</h1><span class="label">ALPHA</span>
+				<h1>Postcodes to IMD deciles</h1><span class="alpha">ALPHA</span>
 			</div>
 		</div>
 
@@ -148,7 +153,7 @@
 
 				<section id="step2">
 					<h2 class="step2">Results</h2>
-					<p>Make sure to check if the table has been cleaned correctly.</p>
+					<p>Make sure to check any errors below.</p>
 					<output id="contents"></output>
 
 					<p><button type="button" id="save" class="seasonal">Save CSV</button> <button type="button" id="reset" class="c14-bg">Reset</button></p>

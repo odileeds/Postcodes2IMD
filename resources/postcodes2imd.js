@@ -42,7 +42,13 @@ S(document).ready(function(){
 			d = 'Postcode\n'+e.currentTarget.value;
 			e.data.me.parsePostcodes(d,{'url':'','data':CSVToArray(d)});
 		});
-		
+
+		/*S('#step1').append('<p><button id="example" class="c14-bg">Load example</button> (<a href="https://datamillnorth.org/dataset/business-rates">14/01/2019   Leeds City Council Business Rates data from Data Mill North</a>)</p>');
+		S('#example').on('click',{me:this},function(e){
+			e.preventDefault();
+			e.data.me.loadExample();
+		});*/
+
 		this.buildMessages();
 		return this;
 	}
@@ -110,7 +116,7 @@ S(document).ready(function(){
 		// Regex for postcodes 
 		var validpostcode = new RegExp(/^([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})$/);
 
-		var postcodes = [];
+		this.postcodes = [];
 		var postcodeareas = {};
 		this.messages = [];
 
@@ -128,7 +134,8 @@ S(document).ready(function(){
 					}
 				}
 				if(ok){
-					postcodes.push(this.data.rows[i][0]);
+					// Remove spaces
+					this.postcodes.push(this.data.rows[i][0].replace(/ /g,""));
 					// Now we need to find the postcode areas e.g. LS, BD, M etc and load those files if we haven't
 					this.data.rows[i][0].replace(/^[A-Z]{1,2}/,function(m){ postcodeareas[m] = true; });
 				}else{
@@ -137,7 +144,6 @@ S(document).ready(function(){
 			}
 		}
 
-console.log(postcodes,postcodeareas);		
 		// Now load postcode area files
 		this.toload = 0;
 		this.loaded = 0;
@@ -153,6 +159,12 @@ console.log(postcodes,postcodeareas);
 					"area": area,
 					"success": function(d,attr){
 						this.postcodelookup[attr.area] = CSVToArray(d);
+						for(var i = 0; i < this.postcodelookup[attr.area].length; i++){
+							// Convert deciles to numbers
+							this.postcodelookup[attr.area][i][1] = parseInt(this.postcodelookup[attr.area][i][1]);
+							// Remove spaces
+							this.postcodelookup[attr.area][i][0] = this.postcodelookup[attr.area][i][0].replace(/ /g,"");
+						}
 						this.loaded++;
 						if(this.toload==this.loaded) this.buildChart();
 					},
@@ -171,7 +183,59 @@ console.log(postcodes,postcodeareas);
 	};
 	
 	Postcodes2IMD.prototype.buildChart = function(){
-		console.log('buildChart')
+
+		var deciles = new Array(10);
+		var found = new Array(this.postcodes.length);
+		for(var i = 0; i < deciles.length; i++) deciles[i] = 0;
+		for(var i = 0; i < this.postcodes.length; i++) found[i] = false;
+		for(var i = 0; i < this.postcodes.length; i++){
+			// Now we need to find the postcode areas e.g. LS, BD, M etc and load those files if we haven't
+			area = "";
+			this.postcodes[i].replace(/^[A-Z]{1,2}/,function(m){ area = m; });
+			if(area){
+				for(var j = 0; j < this.postcodelookup[area].length; j++){
+					if(this.postcodelookup[area][j][0] == this.postcodes[i]){
+						d = this.postcodelookup[area][j][1]-1;
+						if(!deciles[d]) deciles[d] = 0;
+						deciles[d]++;
+						found[i] = true;
+					}
+				}
+			}
+		}
+		
+		for(var i = 0; i < found.length; i++){
+			if(!found[i]) this.messages.push({'type':'message','title':'Unable to find '+this.postcodes[i]});
+		}
+
+		S('#contents').html('<div id="barchart"></div>');
+				
+
+		// Define the data
+		var data = new Array(deciles.length);
+		for(var i = 0; i < deciles.length; i++) data[i] = ["Decile "+(i+1),deciles[i]];
+		
+		// Create the barchart object
+		var chart = new S.barchart('#barchart');
+
+		// Add the data and draw the chart
+		chart.setData(data).setBins().draw();
+
+		// Display information on hover events
+		chart.on('barover',function(e){
+			S('.balloon').remove();
+			S(e.event.currentTarget).find('.bar').append(
+				'<div class="balloon">'
+				+ (this.bins[e.bin].key)+': '
+				+ (this.bins[e.bin].value).toFixed(2).replace(/\.?0+$/,"")
+				+ '</div>'
+			);
+		}).on('mouseleave',function(e){
+			S('.balloon').remove();
+		});
+		
+		this.buildMessages();
+		
 		return this;
 	}
 	
