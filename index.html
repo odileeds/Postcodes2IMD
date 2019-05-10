@@ -140,11 +140,11 @@
 				<p>At the <a href="https://odileeds.org/events/diversitydata/">ODI Leeds #DiversityData event</a> one group wanted to increase our knowledge of socio-economic diversity in organisations. The idea was to come up with a simple set of statistics inspired by the <a href="https://odileeds.org/projects/gender-pay-gap/">gender pay gap</a>. How do we do that without lots of intrusive questioning of employees? One idea was to use Indices of Multiple Deprivation as a proxy; employee postcodes could be converted to IMD deciles and a simple 10 point histogram could be made for each organisation. Clearly this isn't perfect - IMDs were last created in 2015 and new housing developments mean some are out-of-date - but for large numbers of employees, it might be a good start. Before using this be sure to read our <a href="#privacy">notes on protecting privacy</a>.</p>
 				<section id="step1">
 					<h2 class="step1">Add postcodes</h2>
-					<p>We'll work with it within your browser so postcodes are not uploaded. The file should consist of a big list of postcodes each on a new line.</p>
+					<p>We'll work with it within your browser so postcodes are not uploaded.</p>
 					<textarea id="input"></textarea>
 					<div id="drop_zone" class="dropzone">
 						<div class="helpertext">
-							Drop a CSV file containing postcodes here (or click to browse files)
+							Drop a CSV file containing postcodes here (or click to browse files). There should be a column headed <code>Postcode</code>.
 						</div>
 						<input id="standard_files" class="fileselect" type="file" title="browse" name="files[]" multiple="multiple" accept=".csv, .tsv, .txt" style="border:1px solid red;">
 					</div>
