@@ -20,6 +20,8 @@ S(document).ready(function(){
 		if(file) S().ajax(file,{'complete':this.parsePostcodes,'this':this,'cache':false});
 
 		S('#save').on('click',{me:this},function(e){
+			e.preventDefault();
+			e.stopPropagation();
 			e.data.me.save();
 		});
 
@@ -63,7 +65,6 @@ S(document).ready(function(){
 		delete this.attr;
 		delete this.data;
 		delete this.records;
-		delete this.csv;
 		delete this.file;
 		this.messages = [];
 		this.changes = 0;
@@ -107,7 +108,7 @@ S(document).ready(function(){
 	// Parse the CSV file
 	Postcodes2IMD.prototype.parsePostcodes = function(data,attr){
 
-		this.csv = data;
+		this.originaldata = data;
 		this.attr = attr;
 		var i,pc,ok;
 		
@@ -198,7 +199,6 @@ S(document).ready(function(){
 	};
 	
 	Postcodes2IMD.prototype.buildChart = function(){
-		this.log.time('buildChart');
 
 		var deciles = new Array(10);
 		var found = new Array(this.data.postcodes.length);
@@ -218,7 +218,11 @@ S(document).ready(function(){
 				}
 			}
 		}
-		
+		this.csv = "IMD decile,Count";
+		for(var i = 0; i < deciles.length; i++){
+			this.csv += "\r\n"+(i+1)+","+deciles[i]+"";
+		}
+
 		for(var i = 0; i < found.length; i++){
 			if(!found[i]) this.messages.push({'type':'message','title':'Unable to find '+this.data.postcodes[i]+' at record '+(i+1)});
 		}
@@ -313,170 +317,6 @@ S(document).ready(function(){
 		S('#messages').html(html);
 		return this;
 	};
-	
-	Postcodes2IMD.prototype.findGeography = function(){
-return this;
-		var x = -1;
-		var y = -1;
-
-		var convertfromosgb = false;
-		for(var c = 0; c < this.data.fields.title.length; c++){
-			// Deal with X coordinate
-			if(this.data.fields.title[c].toLowerCase() == "longitude") x = c;
-			if(x < 0 && (this.data.fields.title[c].toLowerCase() == "lon" || this.data.fields.title[c].toLowerCase() == "long")) x = c;
-			if(x < 0 && this.data.fields.title[c].toLowerCase() == "geox") x = c;
-			if(x < 0 && (this.data.fields.title[c].toLowerCase() == "easting" || this.data.fields.title[c].toLowerCase() == "eastings")){
-				x = c;
-				convertfromosgb = true;
-			}
-			// Deal with Y coordinate
-			if(this.data.fields.title[c].toLowerCase() == "latitude") y = c;
-			if(y < 0 && this.data.fields.title[c].toLowerCase() == "lat") y = c;
-			if(y < 0 && this.data.fields.title[c].toLowerCase() == "geoy") y = c;
-			if(y < 0 && (this.data.fields.title[c].toLowerCase() == "northing" || this.data.fields.title[c].toLowerCase() == "northings")){
-				y = c;
-				convertfromosgb = true;
-			}			
-		}
-
-		this.data.geo = new Array(this.data.rows.length);
-		this.geocount = 0;
-		var crs = -1;
-		for(var c = 0; c < this.data.fields.title.length; c++){
-			if(this.data.fields.title[c] == "CoordinateReferenceSystem") crs = c;
-		}		
-
-		if(x >= 0 && y >= 0){
-			for(var i = 0; i < this.data.rows.length; i++){
-				lat = this.data.rows[i][y];
-				lon = this.data.rows[i][x];
-				if(lat!="" && lon!=""){
-					ll = [];
-					if(crs >= 0){
-						if(typeof this.data.rows[i][crs]==="string" && this.data.rows[i][crs].toLowerCase() == "osgb36"){
-							ll = NEtoLL([lon,lat]);
-						}
-					}
-					if(convertfromosgb) ll = NEtoLL([lon,lat]);
-					if(ll.length == 2){
-						lat = ll[0];
-						lon = ll[1];				
-					}
-					if(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180){
-						this.data.geo[i] = [parseFloat(parseFloat(lon).toFixed(6)), parseFloat(parseFloat(lat).toFixed(6))];
-						this.geocount++;
-					}
-				}else{
-					this.data.geo[i] = [];
-				}
-			}
-		}
-
-		return this;
-	};
-
-	
-	// Construct the HTML table
-	Postcodes2IMD.prototype.buildTable = function(){
-
-		// Create the data table
-		var thead = "";
-		var tbody = "";
-		var csv = "";
-		var csvhead = "";
-		var mx = Math.min(this.data.rows.length,this.maxrowstable);
-
-		if(S('#output-table').length==0){
-
-			S('#contents').html('<p id="about-table"></p><div id="output-table" class="table-holder"><table><thead></thead><tbody></tbody></table></div>');
-		}
-		thead += '<tr><th>Title:</th>';
-
-		for(var c in this.data.fields.name){
-			thead += '<th><input id="title-'+c+'" type="text" value="'+this.data.fields.title[c]+'" data-row="title" data-col="'+c+'" /></th>';
-			if(csvhead) csvhead += ',';
-			csvhead += this.data.fields.title[c];
-		}
-
-		thead += '</tr>';
-		thead += '<tr><th>Type:</th>';
-		for(var c in this.data.fields.name){
-			thead += '<th>'+this.buildSelect(this.data.fields.format[c],"format",c)+'</th>';
-		}
-		thead += '</tr>';
-
-		thead += '<tr><th>Keep?</th>';
-		for(var c in this.data.fields.name){
-			thead += '<th class="constraint"><label></label>'+this.buildTrueFalse(this.data.fields.required[c],"required",c)+'<!--<button class="delete" title="Remove this constraint from this column">&times;</button><button class="add" title="Add a constraint to this column">&plus;</button>--></th>';
-		}
-		thead += '</tr>';
-
-		S('#output-table thead').html(thead);
-
-		S('#contents select').on('change',{me:this},function(e,i){
-			var el = document.getElementById(e.currentTarget.id);
-			var value = el.options[el.selectedIndex].value;
-			e.data.me.update(e.currentTarget.id,value);
-		});
-		S('#contents input').on('change',{me:this},function(e,i){
-			e.data.me.update(e.currentTarget.id,e.currentTarget.value);
-		});
-
-		
-		if(!this.geocount) this.geocount = 0;
-		S('#about-table').html("We loaded <em>"+this.records+" records</em> (only showing the first "+mx+" in the table).");
-
-		// Convert dates to ISO format
-		for(var c = 0; c < this.data.rows[0].length; c++){
-			if(this.data.fields.format[c]=="datetime" && this.rules.clean && this.rules.clean.isodates){
-				tmp = convertDates(this.data,c);
-				if(tmp.message){
-					this.data = tmp.data;
-					this.messages.push({'type':'warning','title':tmp.message+' in <em>'+this.data.fields.title[c]+'</em>'});
-					this.changes += tmp.count;
-				}
-			}
-		}
-
-
-		// Build example table
-		if(!this.data.geo) this.data.geo = [];
-		for(var i = 0; i < mx; i++){
-			tbody += '<tr><td class="rn">'+(i+1)+'</td>';
-			for(var c = 0; c < this.data.rows[i].length; c++){
-				tbody += '<td '+(this.data.fields.format[c] == "float" || this.data.fields.format[c] == "integer" || this.data.fields.format[c] == "year" || this.data.fields.format[c] == "date" || this.data.fields.format[c] == "datetime" ? ' class="n"' : '')+'>';
-				tbody += (typeof this.data.rows[i][c]==="string" ? this.data.rows[i][c]:this.data.rows[i][c]);
-				tbody += '</td>';
-			}
-			tbody += '</tr>';
-		}
-		S('#output-table tbody').html(tbody);
-
-		
-		
-		for(var r = 0; r < this.data.rows.length; r++){
-			for(var c = 0; c < this.data.rows[r].length; c++){
-				if(c > 0) csv += ',';
-				if(this.data.fields.format[c]=="string"){
-					comma = false;
-					if(this.data.rows[r][c].indexOf(",") >= 0) comma = true;
-					if(comma) csv += "\"";
-					if(this.rules && this.rules.clean && this.rules.clean.escapenewlines) csv += this.data.rows[r][c].replace(/[\n\r]+/g,'\\n');
-					else csv += this.data.rows[r][c];
-					if(comma) csv += "\"";
-				}else{
-					csv += this.data.rows[r][c];
-				}
-			}
-			csv += "\n";
-		}
-		this.csv = csvhead+'\n'+csv;
-		S('#csvcontents').html(this.csv);
-		
-		//S('.step2').removeClass('processing').addClass('checked');
-
-		return this;
-	};
 
 	// Process a form element and update the data structure
 	Postcodes2IMD.prototype.update = function(id,value){
@@ -488,11 +328,6 @@ return this;
 		if(row == "format") this.data.fields.format[col] = value;
 		if(row == "required") this.data.fields.required[col] = (value.toLowerCase() == "true" ? true : false);
 
-		// Go through form elements and update the format/constraints
-		if(row == "title") this.findGeography();
-		
-		this.buildTable();
-
 		return this;
 	};
 			
@@ -503,8 +338,7 @@ return this;
 
 		var textFileAsBlob = new Blob([this.csv], {type:'text/plain'});
 		if(!this.file) this.file = "data.csv";
-		var fileNameToSaveAs = this.file.substring(0,this.file.lastIndexOf("."))+".csv";
-
+		var fileNameToSaveAs = this.file.substring(0,this.file.lastIndexOf("."))+"-imd.csv";
 		function destroyClickedElement(event){ document.body.removeChild(event.target); }
 
 		var dl = document.createElement("a");
