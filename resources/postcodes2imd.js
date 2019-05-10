@@ -116,7 +116,7 @@ S(document).ready(function(){
 		this.data = Array2JSON(attr.data);
 		this.records = this.data.rows.length; 
 		for(i = 0; i < this.data.fields.name.length; i++){
-			if(this.data.fields.name[i].toLowerCase()=="postcode"){
+			if(this.data.fields.name[i].toLowerCase().replace(/ /g,"")=="postcode"){
 				this.data.postcodecolumn = i;
 			}
 		}
