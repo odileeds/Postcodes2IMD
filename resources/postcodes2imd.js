@@ -11,9 +11,10 @@ S(document).ready(function(){
 		this.version = "1.0";
 
 		this.logging = true;
-		this.log = new Logger({'id':'Postcodes2IMD','logging':this.logging});
+		this.log = new Logger({'id':'Postcodes2IMD','logging':this.logging,'logtime':true});
 		this.messages = [];
-		this.postcodelookup = {};
+		this.data = {};
+		this.postcodes = {};
 
 		// If we provided a filename we load that now
 		if(file) S().ajax(file,{'complete':this.parsePostcodes,'this':this,'cache':false});
@@ -108,26 +109,39 @@ S(document).ready(function(){
 
 		this.csv = data;
 		this.attr = attr;
+		var i,pc,ok;
 		
 		// Convert the CSV to a JSON structure
 		this.data = Array2JSON(attr.data);
 		this.records = this.data.rows.length; 
+		for(i = 0; i < this.data.fields.name.length; i++){
+			if(this.data.fields.name[i].toLowerCase()=="postcode"){
+				this.data.postcodecolumn = i;
+			}
+		}
+		if(this.data.postcodecolumn < 0){
+			this.log.error('No postcode column provided');
+			return;
+		}
 
 		// Regex for postcodes 
 		var validpostcode = new RegExp(/^([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})$/);
 
-		this.postcodes = [];
+		this.data.postcodes = [];
 		var postcodeareas = {};
 		this.messages = [];
 
-		for(var i = 0; i < this.records; i++){
-			if(this.data.rows[i][0]){
+		for(i = 0; i < this.records; i++){
+			if(this.data.rows[i][this.data.postcodecolumn]){
+				// Remove leading/trailing spaces
+				this.data.rows[i][this.data.postcodecolumn] = this.data.rows[i][this.data.postcodecolumn].replace(/(^ | $)/g,"");
 				// Check if this seems to be a valid postcode
-				match = this.data.rows[i][0].match(validpostcode);
+				match = this.data.rows[i][this.data.postcodecolumn].match(validpostcode);
 				ok = false;
+				pc = this.data.rows[i][this.data.postcodecolumn];
 				if(match){
 					for(var m = 0; m < match.length; m++){
-						if(match[m] == this.data.rows[i][0]){
+						if(match[m] == pc){
 							// Valid postcode
 							ok = true;
 						}
@@ -135,11 +149,11 @@ S(document).ready(function(){
 				}
 				if(ok){
 					// Remove spaces
-					this.postcodes.push(this.data.rows[i][0].replace(/ /g,""));
+					this.data.postcodes.push(pc.replace(/ /g,""));
 					// Now we need to find the postcode areas e.g. LS, BD, M etc and load those files if we haven't
-					this.data.rows[i][0].replace(/^[A-Z]{1,2}/,function(m){ postcodeareas[m] = true; });
+					pc.replace(/^[A-Z]{1,2}/,function(m){ postcodeareas[m] = true; });
 				}else{
-					this.messages.push({'type':'warning','title':this.data.rows[i][0]+' does not seem to be a valid postcode'});
+					this.messages.push({'type':'warning','title':pc+' does not seem to be a valid postcode on record '+(i+1)});
 				}
 			}
 		}
@@ -148,22 +162,23 @@ S(document).ready(function(){
 		this.toload = 0;
 		this.loaded = 0;
 		for(var area in postcodeareas){
-			if(postcodeareas[area] && !this.postcodelookup[area]){
+			if(postcodeareas[area] && !this.postcodes[area]){
 				this.toload++;
 			}
 		}
 		for(var area in postcodeareas){
-			if(postcodeareas[area] && !this.postcodelookup[area]){
+			if(postcodeareas[area] && !this.postcodes[area]){
 				S().ajax("postcodes/"+area+".csv",{
 					"this": this,
 					"area": area,
 					"success": function(d,attr){
-						this.postcodelookup[attr.area] = CSVToArray(d);
-						for(var i = 0; i < this.postcodelookup[attr.area].length; i++){
-							// Convert deciles to numbers
-							this.postcodelookup[attr.area][i][1] = parseInt(this.postcodelookup[attr.area][i][1]);
-							// Remove spaces
-							this.postcodelookup[attr.area][i][0] = this.postcodelookup[attr.area][i][0].replace(/ /g,"");
+						var i,imd,pc,pcs;
+						pcs = CSVToArray(d);
+						this.postcodes[attr.area] = {};
+						for(i = 0; i < pcs.length; i++){
+							imd = (parseInt(pcs[i][1])||0);	// Convert deciles to numbers
+							pc = pcs[i][0].replace(/ /g,"")	// Remove spaces
+							this.postcodes[attr.area][pc] = { 'imd': imd, 'postcode': pcs[i][0] };
 						}
 						this.loaded++;
 						if(this.toload==this.loaded) this.buildChart();
@@ -183,29 +198,29 @@ S(document).ready(function(){
 	};
 	
 	Postcodes2IMD.prototype.buildChart = function(){
+		this.log.time('buildChart');
 
 		var deciles = new Array(10);
-		var found = new Array(this.postcodes.length);
+		var found = new Array(this.data.postcodes.length);
 		for(var i = 0; i < deciles.length; i++) deciles[i] = 0;
-		for(var i = 0; i < this.postcodes.length; i++) found[i] = false;
-		for(var i = 0; i < this.postcodes.length; i++){
+		for(var i = 0; i < this.data.postcodes.length; i++) found[i] = false;
+		for(var i = 0; i < this.data.postcodes.length; i++){
 			// Now we need to find the postcode areas e.g. LS, BD, M etc and load those files if we haven't
 			area = "";
-			this.postcodes[i].replace(/^[A-Z]{1,2}/,function(m){ area = m; });
+			this.data.postcodes[i].replace(/^[A-Z]{1,2}/,function(m){ area = m; });
 			if(area){
-				for(var j = 0; j < this.postcodelookup[area].length; j++){
-					if(this.postcodelookup[area][j][0] == this.postcodes[i]){
-						d = this.postcodelookup[area][j][1]-1;
-						if(!deciles[d]) deciles[d] = 0;
-						deciles[d]++;
-						found[i] = true;
-					}
+				pc = this.data.postcodes[i];
+				if(this.postcodes[area][pc]){
+					d = this.postcodes[area][pc].imd-1;
+					if(!deciles[d]) deciles[d] = 0;
+					deciles[d]++;
+					found[i] = true;
 				}
 			}
 		}
 		
 		for(var i = 0; i < found.length; i++){
-			if(!found[i]) this.messages.push({'type':'message','title':'Unable to find '+this.postcodes[i]});
+			if(!found[i]) this.messages.push({'type':'message','title':'Unable to find '+this.data.postcodes[i]+' at record '+(i+1)});
 		}
 
 		S('#contents').html('<div id="barchart"></div>');
@@ -235,7 +250,8 @@ S(document).ready(function(){
 		});
 		
 		this.buildMessages();
-		
+
+	
 		return this;
 	}
 	
