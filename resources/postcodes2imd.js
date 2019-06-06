@@ -11,7 +11,7 @@ S(document).ready(function(){
 		if(event.origin !== "https://odileeds.github.io") return;
 		
 		S('#drop_zone').append('<div><strong>Received data from '+event.data.referer+'</strong> - ' + niceSize(event.data.csv.length) + '</div>').addClass('loaded');
-		converter.parsePostcodes(event.data.csv,{'url':'','data':CSVToArray(event.data.csv)});
+		convertor.parsePostcodes(event.data.csv,{'url':'','data':CSVToArray(event.data.csv)});
 
 		return;
 	}
